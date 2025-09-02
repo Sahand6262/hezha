@@ -1,0 +1,1067 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full" x-data="{ darkMode: $persist(false) }" x-bind:class="{'dark': darkMode}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Order Management System</title>
+    
+    <!-- CDN Imports -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet">
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/persist@3.x.x/dist/cdn.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+
+    <!-- Firebase SDK -->
+    <script type="module">
+        // Import the functions you need from the SDKs you need
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.1/firebase-app.js";
+        import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, getDocs, onSnapshot, query, where, orderBy } from "https://www.gstatic.com/firebasejs/10.12.1/firebase-firestore.js";
+
+        // Your web app's Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyDYmzS0nVn8LUX7gjb4j9pcopvkAgEDwxQ",
+            authDomain: "hezha-30075.firebaseapp.com",
+            projectId: "hezha-30075",
+            storageBucket: "hezha-30075.firebasestorage.app",
+            messagingSenderId: "513895851581",
+            appId: "1:513895851581:web:0eef3178cbb590fa67ec54"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        
+        // Make Firebase available globally
+        window.firebase = {
+            db, collection, addDoc, updateDoc, deleteDoc, doc, getDocs, onSnapshot, query, where, orderBy
+        };
+    </script>
+
+    <!-- Tailwind Configuration -->
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        pink: {
+                            50: '#fdf2f8',
+                            100: '#fce7f3',
+                            200: '#fbcfe8',
+                            300: '#f9a8d4',
+                            400: '#f472b6',
+                            500: '#ec4899',
+                            600: '#db2777',
+                            700: '#be185d',
+                            800: '#9d174d',
+                            900: '#831843',
+                        },
+                        dark: {
+                            800: '#1e293b', 700: '#334155', 600: '#475569',
+                            500: '#64748b', 400: '#94a3b8', 300: '#cbd5e1',
+                            200: '#e2e8f0', 100: '#f1f5f9', 50: '#f8fafc',
+                        }
+                    },
+                    animation: {
+                        'slide-in': 'slide-in 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+                        'shrink': 'shrink var(--duration) linear forwards',
+                        'toast-in': 'toast-in 0.3s ease-out forwards',
+                        'toast-out': 'toast-out 0.3s ease-in forwards'
+                    },
+                    keyframes: {
+                        'slide-in': { 'from': { transform: 'translateX(100%)', opacity: '0' }, 'to': { transform: 'translateX(0)', opacity: '1' } },
+                        'shrink': { 'from': { width: '100%' }, 'to': { width: '0%' } },
+                        'toast-in': { '0%': { transform: 'translateY(100%)', opacity: '0' }, '100%': { transform: 'translateY(0)', opacity: '1' } },
+                        'toast-out': { '0%': { transform: 'translateY(0)', opacity: '1' }, '100%': { transform: 'translateY(100%)', opacity: '0' } }
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- Custom Styles -->
+    <style>
+        [x-cloak] { display: none !important; }
+        .fade-in { animation: fadeIn 0.3s ease-in-out; }
+        @keyframes fadeIn { 
+            from { opacity: 0; transform: translateY(-10px); } 
+            to { opacity: 1; transform: translateY(0); } 
+        }
+        .custom-select {
+            -webkit-appearance: none; -moz-appearance: none; appearance: none;
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+            background-position: right 0.5rem center; background-repeat: no-repeat; background-size: 1.5em 1.5em;
+        }
+        .animate-pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        .modal-container { align-items: center; min-height: calc(100% - 1rem); }
+        @media (max-width: 640px) { .modal-container { align-items: flex-end; } }
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+        .toast-transition { transition: all 0.3s ease; }
+        .input-number-hide-arrows::-webkit-outer-spin-button,
+        .input-number-hide-arrows::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+        .input-number-hide-arrows { -moz-appearance: textfield; }
+        .btn-icon { display: inline-flex; align-items: center; justify-content: center; }
+        .password-toggle { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #6b7280; }
+        @keyframes energyPulse { 0% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.1); opacity: 0.8; } 100% { transform: scale(1); opacity: 1; } }
+        .energy-pulse { animation: energyPulse 2s infinite; }
+        .currency-selector { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: #f3f4f6; border-radius: 4px; padding: 2px 5px; font-size: 0.8rem; color: #4b5563; }
+        .toast-container { position: fixed; z-index: 9999; bottom: 1rem; right: 1rem; display: flex; flex-direction: column; gap: 0.5rem; width: 100%; max-width: 24rem; pointer-events: none; }
+        @media (max-width: 640px) { .toast-container { bottom: 0; right: 0; max-width: 100%; padding: 1rem; } }
+        .modern-select { background-image: linear-gradient(45deg, transparent 50%, #ec4899 50%), linear-gradient(135deg, #ec4899 50%, transparent 50%); background-position: calc(100% - 20px) calc(1em + 2px), calc(100% - 15px) calc(1em + 2px); background-size: 5px 5px, 5px 5px; background-repeat: no-repeat; transition: all 0.3s ease; }
+        .smooth-transition { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        .btn-hover-effect:hover { transform: translateY(-2px); box-shadow: 0 10px 20px -10px rgba(236, 72, 153, 0.6); }
+        .report-card { background: linear-gradient(135deg, #ffffff 0%, #fdf2f8 100%); border-radius: 12px; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05); transition: all 0.3s ease; }
+        .mobile-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+        .gradient-bg { background: linear-gradient(135deg, #ec4899 0%, #db2777 100%); }
+    </style>
+</head>
+<body class="min-h-screen bg-pink-50 dark:bg-gray-900 text-gray-900 dark:text-white">
+    <!-- Toast Notifications -->
+    <div class="toast-container" x-data="toastManager">
+        <template x-for="(toast, index) in toasts" :key="toast.id">
+            <div x-data="{ show: true, close() { this.show = false; setTimeout(() => this.$parent.removeToast(toast.id), 300); } }"
+                 x-show="show" x-transition:enter="toast-in" x-transition:leave="toast-out" class="flex w-full" :style="'--duration: ' + toast.duration + 'ms'">
+                <div class="relative w-full rounded-xl shadow-lg overflow-hidden">
+                    <div class="h-1 w-full" :class="{
+                        'bg-emerald-500': toast.type === 'success', 'bg-red-500': toast.type === 'error',
+                        'bg-blue-500': toast.type === 'info', 'bg-amber-500': toast.type === 'warning'
+                    }"></div>
+                    <div class="p-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+                        <div class="flex items-start">
+                            <div class="flex-shrink-0 mt-0.5">
+                                <template x-if="toast.type === 'success'"><i class='bx bx-check-circle text-emerald-500'></i></template>
+                                <template x-if="toast.type === 'error'"><i class='bx bx-error-circle text-red-500'></i></template>
+                                <template x-if="toast.type === 'info'"><i class='bx bx-info-circle text-blue-500'></i></template>
+                                <template x-if="toast.type === 'warning'"><i class='bx bx-error text-amber-500'></i></template>
+                            </div>
+                            <div class="ml-3 flex-1">
+                                <h3 class="text-sm font-medium text-gray-900 dark:text-white" x-text="toast.title"></h3>
+                                <div class="text-sm mt-1 text-gray-700 dark:text-gray-300" x-text="toast.message"></div>
+                            </div>
+                            <button @click="close" class="ml-4 flex-shrink-0 flex items-center justify-center h-6 w-6 rounded-full bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
+                                <i class='bx bx-x text-gray-500 dark:text-gray-400'></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="absolute bottom-0 left-0 right-0 h-1 bg-gray-100 dark:bg-gray-700">
+                        <div class="h-full animate-shrink" :class="{
+                            'bg-emerald-500': toast.type === 'success', 'bg-red-500': toast.type === 'error',
+                            'bg-blue-500': toast.type === 'info', 'bg-amber-500': toast.type === 'warning'
+                        }" @animationend="close"></div>
+                    </div>
+                </div>
+            </div>
+        </template>
+    </div>
+
+    <!-- Main Application -->
+    <div x-data="orderManager()" x-init="init()" x-cloak>
+        <!-- Main Content -->
+        <main class="pt-6 pb-16 bg-pink-50 dark:bg-gray-900">
+            <div class="max-w-8xl mx-auto px-4 md:px-6">
+                <!-- Hero Section -->
+                <div class="mb-8 rounded-2xl overflow-hidden bg-white dark:bg-gray-800 shadow-xl">
+                    <div class="relative">
+                        <div class="absolute inset-0 gradient-bg opacity-90"></div>
+                        <div class="relative p-8 md:p-12 flex flex-col md:flex-row items-center justify-between">
+                            <div class="mb-6 md:mb-0 md:mr-6">
+                                <h1 class="text-3xl md:text-4xl font-bold text-white mb-3">Order Management System</h1>
+                                <p class="text-pink-100 mb-6 max-w-2xl">
+                                    Manage your orders with our powerful, intuitive platform.
+                                </p>
+                                <div class="flex flex-wrap gap-4">
+                                    <button @click="openEditModal()" class="inline-flex items-center px-5 py-3 bg-white text-pink-600 rounded-xl font-medium shadow-lg hover:bg-pink-50 transition-colors">
+                                        <i class='bx bx-plus mr-2'></i> Add New Order
+                                    </button>
+                                    <button @click="openReportModal()" class="inline-flex items-center px-5 py-3 bg-pink-800 bg-opacity-30 text-white rounded-xl font-medium border border-pink-400 border-opacity-30 hover:bg-opacity-40 transition-colors">
+                                        <i class='bx bx-file mr-2'></i> Generate Report
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="flex-shrink-0 hidden md:block">
+                                <div class="p-1 bg-white bg-opacity-10 rounded-2xl backdrop-blur-sm">
+                                    <div class="grid grid-cols-2 gap-2">
+                                        <div class="bg-white bg-opacity-20 p-4 rounded-xl backdrop-blur-sm text-center">
+                                            <div class="text-3xl font-bold text-white"><span x-text="pagination.total"></span></div>
+                                            <div class="text-xs text-pink-100">Total Orders</div>
+                                        </div>
+                                        <div class="bg-white bg-opacity-20 p-4 rounded-xl backdrop-blur-sm text-center">
+                                            <div class="text-3xl font-bold text-white"><span x-text="formatCurrency(orders.reduce((sum, order) => sum + (parseFloat(order.price) || 0), 0))"></span></div>
+                                            <div class="text-xs text-pink-100">Total Value</div>
+                                        </div>
+                                        <div class="bg-white bg-opacity-20 p-4 rounded-xl backdrop-blur-sm text-center">
+                                            <div class="text-3xl font-bold text-white"><span x-text="ordersToday"></span></div>
+                                            <div class="text-xs text-pink-100">Today's Orders</div>
+                                        </div>
+                                        <div class="bg-white bg-opacity-20 p-4 rounded-xl backdrop-blur-sm text-center">
+                                            <div class="text-2xl font-bold text-white"><span x-text="ordersThisWeek"></span></div>
+                                            <div class="text-xs text-pink-100">This Week</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div style="position: relative; width: 100%; overflow: hidden; height: 50px;">
+                            <div style="position: absolute; bottom: 0; left: 0; right: 0; height: 96px;">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 120" preserveAspectRatio="none" style="width: 100%; height: 100%; fill: currentColor; color: #db2777;">
+                                    <path d="M0,96L48,90.7C96,85,192,75,288,69.3C384,64,480,64,576,74.7C672,85,768,107,864,106.7C960,107,1056,85,1152,74.7C1248,64,1344,64,1392,64L1440,64L1440,120L1392,120C1344,120,1248,120,1152,120C1056,120,960,120,864,120C768,120,672,120,576,120C480,120,384,120,288,120C192,120,96,120,48,120L0,120Z"></path>
+                                    <path d="M0,96L48,85.3C96,75,192,53,288,48C384,43,480,53,576,64C672,75,768,85,864,85.3C960,85,1056,75,1152,64C1248,53,1344,43,1392,37.3L1440,32L1440,120L1392,120C1344,120,1248,120,1152,120C1056,120,960,120,864,120C768,120,672,120,576,120C480,120,384,120,288,120C192,120,96,120,48,120L0,120Z" style="opacity: 0.3;"></path>
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Mobile Stats -->
+                <div class="grid grid-cols-2 gap-4 mb-6 md:hidden">
+                    <div class="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm">
+                        <div class="flex items-center">
+                            <div class="p-2 rounded-lg bg-pink-100 dark:bg-pink-900 text-pink-600 dark:text-pink-200 mr-3"><i class='bx bx-package'></i></div>
+                            <div>
+                                <div class="text-xl font-bold" x-text="pagination.total"></div>
+                                <div class="text-xs text-gray-500 dark:text-gray-400">Orders</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm">
+                        <div class="flex items-center">
+                            <div class="p-2 rounded-lg bg-pink-100 dark:bg-pink-900 text-pink-600 dark:text-pink-200 mr-3"><i class='bx bx-dollar'></i></div>
+                            <div>
+                                <div class="text-xl font-bold" x-text="formatCurrency(orders.reduce((sum, order) => sum + (parseFloat(order.price) || 0), 0))"></div>
+                                <div class="text-xs text-gray-500 dark:text-gray-400">Total Value</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Search and Filters -->
+                <div class="mb-6 rounded-xl shadow-lg overflow-hidden bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700">
+                    <div class="p-6">
+                        <div class="mb-6">
+                            <div class="relative">
+                                <input type="text" placeholder="Search by name, item, or phone..." x-model="searchQuery" @input.debounce.500ms="searchOrders()"
+                                    class="w-full pl-12 pr-4 py-4 rounded-xl focus:ring-2 focus:ring-pink-500 focus:border-pink-500 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-400"/>
+                                <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none"><i class='bx bx-search text-gray-500 dark:text-gray-400'></i></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Orders Table -->
+                <div class="rounded-xl shadow-lg overflow-hidden bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700">
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                            <thead class="bg-gray-50 dark:bg-gray-700">
+                                <tr>
+                                    <th scope="col" class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-300">Customer</th>
+                                    <th scope="col" class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-300">Contact</th>
+                                    <th scope="col" class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-300">Items</th>
+                                    <th scope="col" class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-300">Price</th>
+                                    <th scope="col" class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-300">Date</th>
+                                    <th scope="col" class="px-6 py-4 text-right text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-300">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+                                <!-- Loading State -->
+                                <tr x-show="isLoading">
+                                    <td colspan="6" class="px-6 py-12 text-center">
+                                        <div class="flex items-center justify-center">
+                                            <i class='bx bx-loader-circle animate-spin text-pink-500 mr-3'></i>
+                                            <span class="text-gray-600 dark:text-gray-300">Loading orders...</span>
+                                        </div>
+                                    </td>
+                                </tr>
+                                
+                                <!-- Empty State -->
+                                <tr x-show="!isLoading && orders.length === 0">
+                                    <td colspan="6" class="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
+                                        <div class="flex flex-col items-center">
+                                            <i class='bx bx-search-alt-2 h-12 w-12 text-gray-300 dark:text-gray-600 mb-3'></i>
+                                            <p class="text-lg font-medium mb-1">No orders found</p>
+                                            <p class="mb-4">Try adding a new order or adjusting your search</p>
+                                            <button @click="openEditModal()" class="px-4 py-2 rounded-lg text-sm font-medium transition-colors bg-pink-50 dark:bg-gray-700 text-pink-600 dark:text-pink-400 hover:bg-pink-100 dark:hover:bg-gray-600">
+                                                Add New Order
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                
+                                <!-- Order Rows -->
+                                <template x-for="order in orders" :key="order.id">
+                                    <tr class="hover:bg-pink-50 dark:hover:bg-gray-700 transition-colors">
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <div class="flex items-center">
+                                                <div class="h-10 w-10 rounded-xl gradient-bg flex items-center justify-center text-white font-medium text-sm">
+                                                    <span x-text="order.name_user ? order.name_user.substring(0, 2).toUpperCase() : 'NA'"></span>
+                                                </div>
+                                                <div class="ml-4">
+                                                    <div class="font-medium text-gray-900 dark:text-white" x-text="order.name_user || 'N/A'"></div>
+                                                    <div class="text-sm text-gray-500 dark:text-gray-400" x-text="order.address ? order.address.substring(0, 20) + (order.address.length > 20 ? '...' : '') : 'No address'"></div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <div class="text-sm text-gray-900 dark:text-white" x-text="order.phone_number || 'N/A'"></div>
+                                        </td>
+                                        <td class="px-6 py-4">
+                                            <div class="text-sm text-gray-900 dark:text-white" x-text="order.item_names ? order.item_names.substring(0, 30) + (order.item_names.length > 30 ? '...' : '') : 'N/A'"></div>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white" x-text="formatCurrency(order.price)"></td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400" x-text="formatDate(order.date)"></td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                            <div class="flex justify-end space-x-2">
+                                                <button @click="generateSingleOrderReport(order, 'pdf')" class="p-2 rounded-lg transition-colors bg-pink-50 dark:bg-gray-700 text-pink-600 dark:text-pink-400 hover:bg-pink-100 dark:hover:bg-gray-600" title="Generate PDF Report">
+                                                    <i class='bx bx-file'></i>
+                                                </button>
+                                                <button @click="openEditModal(order)" class="p-2 rounded-lg transition-colors bg-pink-50 dark:bg-gray-700 text-pink-600 dark:text-pink-400 hover:bg-pink-100 dark:hover:bg-gray-600" title="Edit">
+                                                    <i class='bx bx-edit'></i>
+                                                </button>
+                                                <button @click="confirmDelete(order.id, order.name_user)" class="p-2 rounded-lg transition-colors bg-red-50 dark:bg-gray-700 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-gray-600" title="Delete">
+                                                    <i class='bx bx-trash'></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Pagination -->
+                    <div x-show="pagination.last_page > 1" x-cloak class="bg-white dark:bg-gray-800 px-4 py-3 flex items-center justify-between border-t border-gray-200 dark:border-gray-700 sm:px-6">
+                        <div class="flex-1 flex justify-between sm:hidden">
+                            <button @click="changePage(pagination.current_page - 1)" :disabled="pagination.current_page === 1"
+                                class="relative inline-flex items-center px-3 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 transition duration-150 smooth-transition">
+                                Previous
+                            </button>
+                            <button @click="changePage(pagination.current_page + 1)" :disabled="pagination.current_page === pagination.last_page"
+                                class="ml-3 relative inline-flex items-center px-3 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 transition duration-150 smooth-transition">
+                                Next
+                            </button>
+                        </div>
+                        <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                            <div>
+                                <p class="text-sm text-gray-700 dark:text-gray-300">
+                                    Showing <span x-text="pagination.from" class="font-medium"></span> to 
+                                    <span x-text="pagination.to" class="font-medium"></span> of 
+                                    <span x-text="pagination.total" class="font-medium"></span> results
+                                </p>
+                            </div>
+                            <div>
+                                <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                                    <button @click="changePage(pagination.current_page - 1)" :disabled="pagination.current_page === 1"
+                                        class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white dark:bg-gray-700 text-sm font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-600 transition duration-150 smooth-transition">
+                                        <span class="sr-only">Previous</span><i class='bx bx-chevron-left'></i>
+                                    </button>
+                                    
+                                    <template x-for="page in pagination.links" :key="page.label">
+                                        <template x-if="page.url !== null">
+                                            <button @click="changePage(page.label)" :class="{
+                                                'z-10 bg-pink-50 border-pink-500 text-pink-600 dark:bg-pink-900 dark:text-pink-200': page.active,
+                                                'bg-white border-gray-300 text-gray-500 hover:bg-gray-50 dark:bg-gray-700 dark:hover:bg-gray-600': !page.active
+                                            }" class="relative inline-flex items-center px-4 py-2 border text-sm font-medium transition duration-150 smooth-transition">
+                                                <span x-text="page.label"></span>
+                                            </button>
+                                        </template>
+                                        <template x-if="page.url === null && page.label.includes('...')">
+                                            <span class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white dark:bg-gray-700 text-sm font-medium text-gray-700 dark:text-gray-300">
+                                                <span x-text="page.label"></span>
+                                            </span>
+                                        </template>
+                                    </template>
+                                    
+                                    <button @click="changePage(pagination.current_page + 1)" :disabled="pagination.current_page === pagination.last_page"
+                                        class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white dark:bg-gray-700 text-sm font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-600 transition duration-150 smooth-transition">
+                                        <span class="sr-only">Next</span><i class='bx bx-chevron-right'></i>
+                                    </button>
+                                </nav>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+        
+        <!-- Add/Edit Order Modal -->
+        <div x-show="showAddModal" x-cloak class="fixed inset-0 bg-black bg-opacity-75 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+            <div class="rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto bg-white dark:bg-gray-800">
+                <div class="flex justify-between items-center p-6 border-b border-gray-200 dark:border-gray-700">
+                    <h2 class="text-2xl font-bold text-gray-900 dark:text-white" x-text="editingOrder.id ? 'Edit Order' : 'Add New Order'"></h2>
+                    <button @click="showAddModal = false" class="w-10 h-10 flex items-center justify-center rounded-full transition-colors bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600">
+                        <i class='bx bx-x text-2xl'></i>
+                    </button>
+                </div>
+                <form @submit.prevent="saveOrder" class="p-6">
+                    <input type="hidden" x-model="editingOrder.id">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="col-span-1 md:col-span-2">
+                            <label class="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Customer Name<span class="text-red-500">*</span></label>
+                            <div class="relative">
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><i class='bx bx-user text-xl text-gray-500 dark:text-gray-400'></i></div>
+                                <input type="text" name="name_user" x-model="editingOrder.name_user" class="block w-full pl-10 pr-3 py-3 rounded-xl focus:ring-2 focus:ring-pink-500 focus:border-pink-500 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white" required/>
+                            </div>
+                        </div>
+                        <div class="col-span-1 md:col-span-2">
+                            <label class="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Address</label>
+                            <div class="relative">
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><i class='bx bx-map text-xl text-gray-500 dark:text-gray-400'></i></div>
+                                <input type="text" name="address" x-model="editingOrder.address" class="block w-full pl-10 pr-3 py-3 rounded-xl focus:ring-2 focus:ring-pink-500 focus:border-pink-500 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white"/>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Phone Number<span class="text-red-500">*</span></label>
+                            <div class="relative">
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><i class='bx bx-phone text-xl text-gray-500 dark:text-gray-400'></i></div>
+                                <input type="text" name="phone_number" x-model="editingOrder.phone_number" class="block w-full pl-10 pr-3 py-3 rounded-xl focus:ring-2 focus:ring-pink-500 focus:border-pink-500 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white" required/>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Price<span class="text-red-500">*</span></label>
+                            <div class="relative">
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><i class='bx bx-dollar text-xl text-gray-500 dark:text-gray-400'></i></div>
+                                <input type="number" name="price" x-model="editingOrder.price" class="block w-full pl-10 pr-3 py-3 rounded-xl focus:ring-2 focus:ring-pink-500 focus:border-pink-500 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white input-number-hide-arrows" required step="0.01" min="0"/>
+                                <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-gray-500 dark:text-gray-400">IQD</div>
+                            </div>
+                        </div>
+                        <div class="col-span-1 md:col-span-2">
+                            <label class="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Items<span class="text-red-500">*</span></label>
+                            <div class="relative">
+                                <div class="absolute top-3 left-3"><i class='bx bx-package text-xl text-gray-500 dark:text-gray-400'></i></div>
+                                <textarea name="item_names" x-model="editingOrder.item_names" rows="3" class="block w-full pl-10 pr-3 py-3 rounded-xl focus:ring-2 focus:ring-pink-500 focus:border-pink-500 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white" required></textarea>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-8 flex justify-end">
+                        <button type="button" @click="showAddModal = false" class="mr-4 px-5 py-3 rounded-xl font-medium transition-colors bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600">Cancel</button>
+                        <button type="submit" class="px-5 py-3 gradient-bg hover:opacity-90 text-white rounded-xl font-medium shadow-lg transition-colors">
+                            <span x-text="editingOrder.id ? 'Update Order' : 'Add Order'"></span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Delete Confirmation Modal -->
+        <div x-show="showDeleteModal && orderToDelete" x-cloak class="fixed inset-0 bg-black bg-opacity-75 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+            <div class="rounded-2xl shadow-2xl w-full max-w-md bg-white dark:bg-gray-800">
+                <div class="p-6">
+                    <div class="flex items-center justify-center mb-6">
+                        <div class="h-20 w-20 flex items-center justify-center rounded-full bg-red-100 dark:bg-red-900 flex items-center justify-center">
+                            <i class='bx bx-error text-red-600 dark:text-red-400 text-2xl'></i>
+                        </div>
+                    </div>
+                    <h3 class="text-xl font-bold text-center mb-2 text-gray-900 dark:text-white">Delete Order</h3>
+                    <p class="text-center mb-6 text-gray-600 dark:text-gray-300">
+                        Are you sure you want to delete the order for <span class="font-medium" x-text="orderToDeleteName"></span>?
+                        This action cannot be undone.
+                    </p>
+                    <div class="flex justify-center space-x-4">
+                        <button @click="showDeleteModal = false" class="px-5 py-3 rounded-xl font-medium transition-colors bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600">Cancel</button>
+                        <button @click="deleteOrder()" class="px-5 py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl font-medium shadow-lg transition-colors">Delete</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Generate Report Modal -->
+        <div x-show="showReportModal" x-cloak class="fixed inset-0 bg-black bg-opacity-75 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+            <div class="rounded-2xl shadow-2xl w-full max-w-lg bg-white dark:bg-gray-800">
+                <div class="flex justify-between items-center p-6 border-b border-gray-200 dark:border-gray-700">
+                    <h2 class="text-2xl font-bold text-gray-900 dark:text-white">Generate Order Report</h2>
+                    <button @click="showReportModal = false" class="p-2 rounded-full transition-colors bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"><i class='bx bx-x'></i></button>
+                </div>
+                <div class="p-6">
+                    <div class="mb-6">
+                        <h3 class="text-lg font-medium mb-3 text-gray-900 dark:text-white">Date Range</h3>
+                        <div class="grid grid-cols-2 gap-4">
+                            <button @click="setReportRange('today')" :class="{'gradient-bg text-white': reportRange === 'today', 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300': reportRange !== 'today'}" class="px-4 py-3 rounded-xl font-medium transition-colors">
+                                Today
+                            </button>
+                            <button @click="setReportRange('yesterday')" :class="{'gradient-bg text-white': reportRange === 'yesterday', 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300': reportRange !== 'yesterday'}" class="px-4 py-3 rounded-xl font-medium transition-colors">
+                                Yesterday
+                            </button>
+                            <button @click="setReportRange('week')" :class="{'gradient-bg text-white': reportRange === 'week', 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300': reportRange !== 'week'}" class="px-4 py-3 rounded-xl font-medium transition-colors">
+                                This Week
+                            </button>
+                            <button @click="setReportRange('month')" :class="{'gradient-bg text-white': reportRange === 'month', 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300': reportRange !== 'month'}" class="px-4 py-3 rounded-xl font-medium transition-colors">
+                                This Month
+                            </button>
+                            <button @click="setReportRange('year')" :class="{'gradient-bg text-white': reportRange === 'year', 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300': reportRange !== 'year'}" class="px-4 py-3 rounded-xl font-medium transition-colors col-span-2">
+                                This Year
+                            </button>
+                        </div>
+                    </div>
+                    <div class="flex justify-end">
+                        <button @click="showReportModal = false" class="mr-4 px-5 py-3 rounded-xl font-medium transition-colors bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600">Cancel</button>
+                        <button @click="generateReport('pdf')" class="px-5 py-3 gradient-bg hover:opacity-90 text-white rounded-xl font-medium shadow-lg transition-colors flex items-center">
+                            <i class='bx bx-file h-5 w-5 mr-2'></i>Generate Report
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript -->
+    <script>
+        // Initialize jsPDF
+        const { jsPDF } = window.jspdf;
+        
+        // Toast Manager Component
+        document.addEventListener('alpine:init', () => {
+            Alpine.data('toastManager', () => ({
+                toasts: [],
+                init() {
+                    setInterval(() => {
+                        const now = Date.now();
+                        this.toasts = this.toasts.filter(toast => {
+                            if (toast.expiresAt && now >= toast.expiresAt) return false;
+                            return true;
+                        });
+                    }, 1000);
+                },
+                showToast(title, type = 'success', message = '', duration = 5000) {
+                    const toast = {
+                        id: Date.now(), title, message, type, duration,
+                        expiresAt: Date.now() + duration
+                    };
+                    this.toasts.push(toast);
+                    return toast.id;
+                },
+                removeToast(id) {
+                    const index = this.toasts.findIndex(t => t.id === id);
+                    if (index !== -1) this.toasts.splice(index, 1);
+                }
+            }));
+        });
+
+        // Order Manager Application
+        function orderManager() {
+            return {
+                // State
+                searchQuery: '', isLoading: false,
+                orders: [], allOrders: [],
+                pagination: { current_page: 1, last_page: 1, from: 0, to: 0, total: 0, links: [] },
+                showAddModal: false, showDeleteModal: false, showReportModal: false,
+                reportRange: 'today',
+                editingOrder: {
+                    id: null, name_user: '', address: '', phone_number: '', item_names: '', price: ''
+                },
+                orderToDelete: null, orderToDeleteName: '',
+                ordersToday: 0, ordersThisWeek: 0,
+
+                // Methods
+                async init() {
+                    if (localStorage.getItem('darkMode') === 'true' || 
+                        (!localStorage.getItem('darkMode') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                        this.darkMode = true;
+                        document.documentElement.classList.add('dark');
+                    }
+                    await this.fetchOrders();
+                },
+                
+                showToast(title, type = 'success', message = '', duration = 5000) {
+                    const toastContainer = document.querySelector('.toast-container');
+                    if (toastContainer && toastContainer._x_dataStack) {
+                        const toastManager = toastContainer._x_dataStack[0];
+                        return toastManager.showToast(title, type, message, duration);
+                    }
+                    console.log(`[Toast] ${type}: ${title} - ${message}`);
+                    return null;
+                },
+                
+                formatCurrency(amount) {
+                    const numAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
+                    return new Intl.NumberFormat('en-US', {
+                        style: 'currency', currency: 'USD', minimumFractionDigits: 0
+                    }).format(numAmount || 0).replace('$', 'IQD ');
+                },
+                
+                formatDate(dateString) {
+                    if (!dateString) return 'N/A';
+                    const date = new Date(dateString);
+                    return date.toLocaleDateString('en-US', { 
+                        year: 'numeric', 
+                        month: 'short', 
+                        day: 'numeric' 
+                    });
+                },
+                
+                async fetchOrders() {
+                    this.isLoading = true;
+                    try {
+                        // Get all orders from Firebase
+                        const querySnapshot = await firebase.getDocs(firebase.collection(firebase.db, "orders"));
+                        const orders = [];
+                        querySnapshot.forEach((doc) => {
+                            orders.push({ id: doc.id, ...doc.data() });
+                        });
+                        
+                        // Sort by date (newest first)
+                        orders.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+                        
+                        this.allOrders = orders;
+                        this.orders = orders;
+                        this.pagination.total = orders.length;
+                        this.pagination.last_page = Math.ceil(orders.length / 10);
+                        
+                        // Calculate stats
+                        const today = new Date();
+                        today.setHours(0, 0, 0, 0);
+                        
+                        this.ordersToday = orders.filter(order => {
+                            const orderDate = new Date(order.date);
+                            orderDate.setHours(0, 0, 0, 0);
+                            return orderDate.getTime() === today.getTime();
+                        }).length;
+                        
+                        const startOfWeek = new Date(today);
+                        startOfWeek.setDate(today.getDate() - today.getDay());
+                        
+                        this.ordersThisWeek = orders.filter(order => {
+                            const orderDate = new Date(order.date);
+                            return orderDate >= startOfWeek;
+                        }).length;
+                        
+                    } catch (error) {
+                        console.error('Error fetching orders:', error);
+                        this.showToast('Error', 'error', 'Error loading orders');
+                    } finally {
+                        this.isLoading = false;
+                    }
+                },
+                
+                searchOrders() {
+                    if (!this.searchQuery) {
+                        this.orders = this.allOrders;
+                        return;
+                    }
+                    
+                    const query = this.searchQuery.toLowerCase();
+                    this.orders = this.allOrders.filter(order => 
+                        (order.name_user && order.name_user.toLowerCase().includes(query)) ||
+                        (order.item_names && order.item_names.toLowerCase().includes(query)) ||
+                        (order.phone_number && order.phone_number.includes(query))
+                    );
+                },
+                
+                changePage(page) {
+                    if (page >= 1 && page <= this.pagination.last_page) {
+                        this.pagination.current_page = page;
+                    }
+                },
+                
+                openEditModal(order = null) {
+                    if (order) {
+                        this.editingOrder = { ...order };
+                    } else {
+                        this.editingOrder = {
+                            id: null, name_user: '', address: '', phone_number: '', item_names: '', price: ''
+                        };
+                    }
+                    this.showAddModal = true;
+                },
+                
+                openReportModal() { 
+                    this.reportRange = 'today';
+                    this.showReportModal = true; 
+                },
+                
+                setReportRange(range) {
+                    this.reportRange = range;
+                },
+                
+                getOrdersByDateRange() {
+                    const now = new Date();
+                    let startDate, endDate;
+                    
+                    switch (this.reportRange) {
+                        case 'today':
+                            startDate = new Date(now);
+                            startDate.setHours(0, 0, 0, 0);
+                            endDate = new Date(now);
+                            endDate.setHours(23, 59, 59, 999);
+                            break;
+                        case 'yesterday':
+                            startDate = new Date(now);
+                            startDate.setDate(now.getDate() - 1);
+                            startDate.setHours(0, 0, 0, 0);
+                            endDate = new Date(now);
+                            endDate.setDate(now.getDate() - 1);
+                            endDate.setHours(23, 59, 59, 999);
+                            break;
+                        case 'week':
+                            startDate = new Date(now);
+                            startDate.setDate(now.getDate() - now.getDay());
+                            startDate.setHours(0, 0, 0, 0);
+                            endDate = new Date(now);
+                            endDate.setHours(23, 59, 59, 999);
+                            break;
+                        case 'month':
+                            startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+                            startDate.setHours(0, 0, 0, 0);
+                            endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+                            endDate.setHours(23, 59, 59, 999);
+                            break;
+                        case 'year':
+                            startDate = new Date(now.getFullYear(), 0, 1);
+                            startDate.setHours(0, 0, 0, 0);
+                            endDate = new Date(now.getFullYear(), 11, 31);
+                            endDate.setHours(23, 59, 59, 999);
+                            break;
+                        default:
+                            return this.allOrders;
+                    }
+                    
+                    return this.allOrders.filter(order => {
+                        const orderDate = new Date(order.date);
+                        return orderDate >= startDate && orderDate <= endDate;
+                    });
+                },
+                
+                async generateReport(type) {
+                    this.showReportModal = false;
+                    this.showToast('Generating Report', 'info', 'Please wait while we prepare your report...');
+                    
+                    try {
+                        const ordersToReport = this.getOrdersByDateRange();
+                        
+                        if (ordersToReport.length === 0) {
+                            throw new Error('No orders found for the selected date range');
+                        }
+                        
+                        await new Promise(resolve => setTimeout(resolve, 500));
+                        
+                        if (type === 'pdf') {
+                            await this.generatePDFReport(ordersToReport);
+                        } else {
+                            throw new Error('Invalid report type');
+                        }
+                        
+                        this.showToast('Success', 'success', 'Report generated successfully!');
+                    } catch (error) {
+                        console.error('Error generating report:', error);
+                        this.showToast('Error', 'error', 'Failed to generate report: ' + error.message);
+                    }
+                },
+                
+                async generateSingleOrderReport(order, type) {
+                    this.showToast('Generating Report', 'info', `Preparing order report...`);
+                    
+                    try {
+                        await new Promise(resolve => setTimeout(resolve, 300));
+                        
+                        if (type === 'pdf') {
+                            await this.generateOrderPDFReport(order);
+                        } else {
+                            throw new Error('Invalid report type');
+                        }
+                        
+                        this.showToast('Success', 'success', `Order report generated successfully!`);
+                    } catch (error) {
+                        console.error('Error generating single order report:', error);
+                        this.showToast('Error', 'error', `Failed to generate order report: ` + error.message);
+                    }
+                },
+                
+                async generatePDFReport(orders) {
+                    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+                    const pageWidth = doc.internal.pageSize.getWidth();
+                    const pageHeight = doc.internal.pageSize.getHeight();
+                    
+                    // Add header to each page
+                    const addHeader = (pageNumber) => {
+                        doc.setFillColor(236, 72, 153);
+                        doc.rect(0, 0, pageWidth, 20, 'F');
+                        doc.setFontSize(16);
+                        doc.setTextColor(255, 255, 255);
+                        doc.setFont('helvetica', 'bold');
+                        doc.text("Hezha Report of Order", pageWidth / 2, 12, { align: 'center' });
+                        
+                        // Report date range
+                        doc.setFontSize(10);
+                        doc.setTextColor(255, 255, 255);
+                        let rangeText = '';
+                        
+                        switch(this.reportRange) {
+                            case 'today': rangeText = 'Today'; break;
+                            case 'yesterday': rangeText = 'Yesterday'; break;
+                            case 'week': rangeText = 'This Week'; break;
+                            case 'month': rangeText = 'This Month'; break;
+                            case 'year': rangeText = 'This Year'; break;
+                        }
+                        
+                        doc.text(`Date Range: ${rangeText}`, 15, 17);
+                        
+                        // Report generation date
+                        const now = new Date();
+                        doc.text(`Generated: ${now.toLocaleDateString()}`, pageWidth - 15, 17, { align: 'right' });
+                    };
+                    
+                    // Add footer to each page
+                    const addFooter = (pageNumber, totalPages) => {
+                        doc.setFontSize(10);
+                        doc.setTextColor(100, 100, 100);
+                        doc.text(`Page ${pageNumber} of ${totalPages}`, pageWidth / 2, pageHeight - 10, { align: 'center' });
+                    };
+                    
+                    let currentY = 30;
+                    let currentPage = 1;
+                    const maxY = pageHeight - 20;
+                    
+                    // Add first page header
+                    addHeader(currentPage);
+                    
+                    // Summary section
+                    doc.setFontSize(14);
+                    doc.setTextColor(0, 0, 0);
+                    doc.setFont('helvetica', 'bold');
+                    doc.text('Order Summary', 15, currentY);
+                    currentY += 10;
+                    
+                    doc.setFontSize(10);
+                    doc.setFont('helvetica', 'normal');
+                    doc.text(`Total Orders: ${orders.length}`, 15, currentY);
+                    currentY += 6;
+                    
+                    const totalValue = orders.reduce((sum, order) => sum + (parseFloat(order.price) || 0), 0);
+                    doc.text(`Total Value: ${this.formatCurrency(totalValue)}`, 15, currentY);
+                    currentY += 10;
+                    
+                    // Table header
+                    doc.setFillColor(240, 240, 240);
+                    doc.rect(15, currentY, pageWidth - 30, 8, 'F');
+                    currentY += 5;
+                    
+                    doc.setFontSize(10);
+                    doc.setTextColor(0, 0, 0);
+                    doc.setFont('helvetica', 'bold');
+                    doc.text('Customer', 17, currentY);
+                    doc.text('Items', 70, currentY);
+                    doc.text('Price', pageWidth - 25, currentY, { align: 'right' });
+                    currentY += 10;
+                    
+                    // Orders list
+                    doc.setFont('helvetica', 'normal');
+                    doc.setFontSize(9);
+                    
+                    for (let i = 0; i < orders.length; i++) {
+                        const order = orders[i];
+                        
+                        // Check if we need a new page
+                        if (currentY > maxY) {
+                            addFooter(currentPage, 0);
+                            doc.addPage();
+                            currentPage++;
+                            currentY = 20;
+                            addHeader(currentPage);
+                            
+                            // Add table header again
+                            doc.setFillColor(240, 240, 240);
+                            doc.rect(15, currentY, pageWidth - 30, 8, 'F');
+                            currentY += 5;
+                            
+                            doc.setFontSize(10);
+                            doc.setTextColor(0, 0, 0);
+                            doc.setFont('helvetica', 'bold');
+                            doc.text('Customer', 17, currentY);
+                            doc.text('Items', 70, currentY);
+                            doc.text('Price', pageWidth - 25, currentY, { align: 'right' });
+                            currentY += 10;
+                        }
+                        
+                        // Customer name
+                        doc.setTextColor(0, 0, 0);
+                        doc.text(order.name_user || 'N/A', 17, currentY);
+                        
+                        // Items (truncated if too long)
+                        const items = order.item_names || 'N/A';
+                        const truncatedItems = items.length > 40 ? items.substring(0, 40) + '...' : items;
+                        doc.text(truncatedItems, 70, currentY);
+                        
+                        // Price
+                        doc.setTextColor(0, 0, 0);
+                        doc.text(this.formatCurrency(order.price), pageWidth - 25, currentY, { align: 'right' });
+                        
+                        currentY += 6;
+                        
+                        // Phone and date
+                        doc.setTextColor(100, 100, 100);
+                        doc.text(`Phone: ${order.phone_number || 'N/A'}`, 17, currentY);
+                        
+                        if (order.date) {
+                            const date = new Date(order.date);
+                            doc.text(`Date: ${date.toLocaleDateString()}`, pageWidth - 25, currentY, { align: 'right' });
+                        }
+                        
+                        currentY += 10;
+                        
+                        // Separator line
+                        if (i < orders.length - 1) {
+                            doc.setDrawColor(220, 220, 220);
+                            doc.line(15, currentY, pageWidth - 15, currentY);
+                            currentY += 5;
+                        }
+                    }
+                    
+                    // Add final footer
+                    addFooter(currentPage, currentPage);
+                    
+                    // Save the PDF
+                    let fileName = `Hezha_Order_Report_${this.reportRange}_${new Date().toISOString().slice(0,10)}.pdf`;
+                    doc.save(fileName);
+                },
+                
+                async generateOrderPDFReport(order) {
+                    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+                    const pageWidth = doc.internal.pageSize.getWidth();
+                    
+                    // Header
+                    doc.setFillColor(236, 72, 153);
+                    doc.rect(0, 0, pageWidth, 20, 'F');
+                    doc.setFontSize(16);
+                    doc.setTextColor(255, 255, 255);
+                    doc.setFont('helvetica', 'bold');
+                    doc.text("Hezha Order Report", pageWidth / 2, 12, { align: 'center' });
+                    
+                    // Order details
+                    let currentY = 40;
+                    doc.setFontSize(14);
+                    doc.setTextColor(0, 0, 0);
+                    doc.setFont('helvetica', 'bold');
+                    doc.text('Order Details', 15, currentY);
+                    currentY += 15;
+                    
+                    doc.setFontSize(11);
+                    doc.setFont('helvetica', 'normal');
+                    
+                    const details = [
+                        { label: 'Customer Name', value: order.name_user || 'N/A' },
+                        { label: 'Address', value: order.address || 'N/A' },
+                        { label: 'Phone Number', value: order.phone_number || 'N/A' },
+                        { label: 'Items', value: order.item_names || 'N/A' },
+                        { label: 'Price', value: this.formatCurrency(order.price) },
+                        { label: 'Date', value: order.date ? new Date(order.date).toLocaleDateString() : 'N/A' }
+                    ];
+                    
+                    details.forEach(detail => {
+                        doc.setFont('helvetica', 'bold');
+                        doc.setTextColor(0, 0, 0);
+                        doc.text(`${detail.label}:`, 15, currentY);
+                        
+                        doc.setFont('helvetica', 'normal');
+                        doc.setTextColor(80, 80, 80);
+                        
+                        // Handle multi-line text for items
+                        if (detail.label === 'Items' && detail.value.length > 80) {
+                            const lines = doc.splitTextToSize(detail.value, pageWidth - 40);
+                            doc.text(lines, 50, currentY);
+                            currentY += (lines.length * 6);
+                        } else {
+                            doc.text(detail.value, 50, currentY);
+                            currentY += 8;
+                        }
+                    });
+                    
+                    // Footer
+                    doc.setFontSize(10);
+                    doc.setTextColor(100, 100, 100);
+                    doc.text(`Report generated on: ${new Date().toLocaleDateString()}`, pageWidth / 2, doc.internal.pageSize.getHeight() - 10, { align: 'center' });
+                    
+                    // Save the PDF
+                    let fileName = `Hezha_Order_${order.name_user || 'order'}_${new Date().toISOString().slice(0,10)}.pdf`;
+                    doc.save(fileName);
+                },
+                
+                async saveOrder() {
+                    // Validation
+                    if (!this.editingOrder.name_user) {
+                        this.showToast('Validation Error', 'error', 'Customer name is required');
+                        return;
+                    }
+                    
+                    if (!this.editingOrder.phone_number) {
+                        this.showToast('Validation Error', 'error', 'Phone number is required');
+                        return;
+                    }
+                    
+                    if (!this.editingOrder.item_names) {
+                        this.showToast('Validation Error', 'error', 'Items are required');
+                        return;
+                    }
+                    
+                    if (!this.editingOrder.price || parseFloat(this.editingOrder.price) <= 0) {
+                        this.showToast('Validation Error', 'error', 'Valid price is required');
+                        return;
+                    }
+                    
+                    try {
+                        // Prepare order data
+                        const orderData = {
+                            name_user: this.editingOrder.name_user,
+                            address: this.editingOrder.address,
+                            phone_number: this.editingOrder.phone_number,
+                            item_names: this.editingOrder.item_names,
+                            price: parseFloat(this.editingOrder.price),
+                            date: this.editingOrder.date || new Date().toISOString()
+                        };
+                        
+                        if (this.editingOrder.id) {
+                            // Update existing order
+                            await firebase.updateDoc(
+                                firebase.doc(firebase.db, "orders", this.editingOrder.id),
+                                orderData
+                            );
+                            this.showToast('Success', 'success', 'Order updated successfully');
+                        } else {
+                            // Add new order
+                            await firebase.addDoc(
+                                firebase.collection(firebase.db, "orders"),
+                                orderData
+                            );
+                            this.showToast('Success', 'success', 'Order created successfully');
+                        }
+                        
+                        this.showAddModal = false;
+                        await this.fetchOrders(); // Refresh the orders list
+                    } catch (error) {
+                        console.error('Error saving order:', error);
+                        this.showToast('Error', 'error', 'Error saving order: ' + error.message);
+                    }
+                },
+                
+                confirmDelete(id, name) {
+                    this.orderToDelete = id;
+                    this.orderToDeleteName = name;
+                    this.showDeleteModal = true;
+                },
+                
+                async deleteOrder() {
+                    if (!this.orderToDelete) return;
+                    
+                    try {
+                        await firebase.deleteDoc(
+                            firebase.doc(firebase.db, "orders", this.orderToDelete)
+                        );
+                        
+                        this.showToast('Success', 'success', 'Order deleted successfully');
+                        this.showDeleteModal = false;
+                        this.orderToDelete = null;
+                        this.orderToDeleteName = '';
+                        await this.fetchOrders(); // Refresh the orders list
+                    } catch (error) {
+                        console.error('Delete error:', error);
+                        this.showToast('Error', 'error', 'Delete failed: ' + error.message);
+                    }
+                }
+            };
+        }
+    </script>
+</body>
+</html>
