@@ -39,6 +39,14 @@
         window.firebase = {
             db, collection, addDoc, updateDoc, deleteDoc, doc, getDocs, onSnapshot, query, where, orderBy
         };
+        
+        // Initialize the app after Firebase is loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            // This ensures Firebase is fully loaded before Alpine initializes
+            if (window.Alpine) {
+                Alpine.start();
+            }
+        });
     </script>
 
     <!-- Tailwind Configuration -->
@@ -439,8 +447,16 @@
                     </div>
                     <div class="mt-8 flex justify-end">
                         <button type="button" @click="showAddModal = false" class="mr-4 px-5 py-3 rounded-xl font-medium transition-colors bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600">Cancel</button>
-                        <button type="submit" class="px-5 py-3 gradient-bg hover:opacity-90 text-white rounded-xl font-medium shadow-lg transition-colors">
-                            <span x-text="editingOrder.id ? 'Update Order' : 'Add Order'"></span>
+                        <button type="submit" :disabled="isSaving" class="px-5 py-3 gradient-bg hover:opacity-90 text-white rounded-xl font-medium shadow-lg transition-colors flex items-center justify-center min-w-[120px]">
+                            <template x-if="!isSaving">
+                                <span x-text="editingOrder.id ? 'Update Order' : 'Add Order'"></span>
+                            </template>
+                            <template x-if="isSaving">
+                                <div class="flex items-center">
+                                    <i class='bx bx-loader-circle animate-spin mr-2'></i>
+                                    <span x-text="editingOrder.id ? 'Updating...' : 'Adding...'"></span>
+                                </div>
+                            </template>
                         </button>
                     </div>
                 </form>
@@ -461,9 +477,32 @@
                         Are you sure you want to delete the order for <span class="font-medium" x-text="orderToDeleteName"></span>?
                         This action cannot be undone.
                     </p>
-                    <div class="flex justify-center space-x-4">
-                        <button @click="showDeleteModal = false" class="px-5 py-3 rounded-xl font-medium transition-colors bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600">Cancel</button>
-                        <button @click="deleteOrder()" class="px-5 py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl font-medium shadow-lg transition-colors">Delete</button>
+                   <div class="flex justify-center space-x-4">
+    <button @click="showDeleteModal = false" 
+        class="px-5 py-3 rounded-xl font-medium transition-colors bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600">
+        Cancel
+    </button>
+
+    <button @click="deleteOrder()" :disabled="isDeleting" 
+        class="px-5 py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl font-medium shadow-lg transition-colors flex items-center justify-center min-w-[80px]">
+
+        <!-- Normal state -->
+        <template x-if="!isDeleting">
+            <span>Delete</span>
+        </template>
+
+        <!-- Loading state -->
+        <template x-if="isDeleting">
+            <div class="flex items-center">
+                <i class='bx bx-loader-circle animate-spin mr-2'></i>
+                <span>Deleting...</span>
+            </div>
+        </template>
+    </button>
+</div>
+
+                            </template>
+                        </button>
                     </div>
                 </div>
             </div>
@@ -545,7 +584,7 @@
         function orderManager() {
             return {
                 // State
-                searchQuery: '', isLoading: false,
+                searchQuery: '', isLoading: false, isSaving: false, isDeleting: false,
                 orders: [], allOrders: [],
                 pagination: { current_page: 1, last_page: 1, from: 0, to: 0, total: 0, links: [] },
                 showAddModal: false, showDeleteModal: false, showReportModal: false,
@@ -563,6 +602,22 @@
                         this.darkMode = true;
                         document.documentElement.classList.add('dark');
                     }
+                    
+                    // Wait for Firebase to be available
+                    if (typeof firebase === 'undefined') {
+                        console.log('Waiting for Firebase to load...');
+                        await new Promise(resolve => {
+                            const checkFirebase = () => {
+                                if (typeof firebase !== 'undefined') {
+                                    resolve();
+                                } else {
+                                    setTimeout(checkFirebase, 100);
+                                }
+                            };
+                            checkFirebase();
+                        });
+                    }
+                    
                     await this.fetchOrders();
                 },
                 
@@ -1001,6 +1056,8 @@
                         return;
                     }
                     
+                    this.isSaving = true;
+                    
                     try {
                         // Prepare order data
                         const orderData = {
@@ -1033,6 +1090,8 @@
                     } catch (error) {
                         console.error('Error saving order:', error);
                         this.showToast('Error', 'error', 'Error saving order: ' + error.message);
+                    } finally {
+                        this.isSaving = false;
                     }
                 },
                 
@@ -1044,6 +1103,8 @@
                 
                 async deleteOrder() {
                     if (!this.orderToDelete) return;
+                    
+                    this.isDeleting = true;
                     
                     try {
                         await firebase.deleteDoc(
@@ -1058,6 +1119,8 @@
                     } catch (error) {
                         console.error('Delete error:', error);
                         this.showToast('Error', 'error', 'Delete failed: ' + error.message);
+                    } finally {
+                        this.isDeleting = false;
                     }
                 }
             };
